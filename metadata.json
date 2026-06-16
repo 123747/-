@@ -1,0 +1,6 @@
+{
+  "name": "3D Particle Light Mask",
+  "description": "一个基于手势识别的 3D 粒子面具，通过摄像头识别手势控制粒子在面具与 AITO 标志之间进行 3D 转换动画。",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
