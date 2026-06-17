@@ -18,6 +18,7 @@ import { AppConfig, GestureType } from "./types";
 import MaskCanvas from "./components/MaskCanvas";
 import DebugPanel from "./components/DebugPanel";
 import CameraManager from "./components/CameraManager";
+import AitoDialogue from "./components/AitoDialogue";
 
 export default function App() {
   // Global active parameters config state
@@ -155,6 +156,9 @@ export default function App() {
           configColor={config.highlightColor}
         />
       </div>
+
+      {/* 5.5 Right Side Hover Dialogue Assistant */}
+      <AitoDialogue />
 
       {/* 6. Bottom-Left / Center: Shortcuts / Interactive Tips */}
       <AnimatePresence>

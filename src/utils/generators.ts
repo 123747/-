@@ -10,82 +10,169 @@ const rand = (min: number, max: number) => min + Math.random() * (max - min);
  * Generates a 3D physical coordinate (x,y,z) on the surface of a stylized face mask.
  */
 function getSingleMaskPoint(): { x: number; y: number; z: number } {
-  // We sample coordinates until we get a valid point (e.g., outside eye holes)
+  // We sample coordinates until we get a valid point with high anthropomorphic detail
   let attempts = 0;
-  while (attempts < 100) {
+  while (attempts < 150) {
     attempts++;
-    // Use semi-spherical coords to get an oval face shield shape
-    const u = rand(-1, 1); // horizontal span
-    const v = rand(-1.2, 1.2); // vertical span
+    // Angle theta from a rounded face arc and vertical span v
+    const u = rand(-1, 1); // horizontal factor
+    const v = rand(-1.25, 1.25); // vertical factor
 
-    // Base oval face dimensions
-    let x = u * 1.5;
-    let y = v * 2.0;
-    
-    // Taper towards the chin
-    const taper = y < 0 ? (1.0 + y * 0.35) : 1.0;
+    // Base face proportions
+    let x = u * 1.4;
+    let y = v * 1.8;
+
+    // Standard human face proportions:
+    // Chin tapering down, forehead scaling up
+    const taper = y < 0 ? (1.0 + y * 0.42) : (1.0 - (y - 0.6) * 0.08);
     x *= taper;
 
-    // Dome base Z contour
-    const r2 = (u * u) + (v * v) * 0.6;
+    // Generates a smooth base spherical/dome depth Z
+    const r2 = (u * u) + (v * v) * 0.7;
     let z = 0;
     if (r2 < 2.5) {
-      z = Math.sqrt(Math.max(0, 2.5 - r2)) * 0.9;
+      z = Math.sqrt(Math.max(0, 2.5 - r2)) * 0.85;
     } else {
       z = 0;
     }
 
-    // Flatten forehead margins, keep cheek contours
-    if (v > 0.8) {
-      z *= (1.2 - v * 0.2);
+    // Prohibit points too far to the back to keep the frontal portrait view sleek
+    if (z < 0.1) {
+      continue;
     }
 
-    // Eye Hole filtering (exclude vertices near left/right eyes)
-    // Left eye at (-0.45, 0.35), Right eye at (0.45, 0.35)
-    const leftEyeDist = Math.sqrt(Math.pow((x + 0.45) / 0.28, 2) + Math.pow((y - 0.3) / 0.16, 2));
-    const rightEyeDist = Math.sqrt(Math.pow((x - 0.45) / 0.28, 2) + Math.pow((y - 0.3) / 0.16, 2));
+    // 1. Sleek Cybernetic Eye-Slits (narrow slots rather than huge hollow sockets to look human but futuristic)
+    // Eyes are placed at y = 0.28, x = ±0.44
+    const leftEyeX = -0.44;
+    const rightEyeX = 0.44;
+    const eyeY = 0.28;
+    const leftEyeSlot = Math.sqrt(Math.pow((x - leftEyeX) / 0.26, 2) + Math.pow((y - eyeY) / 0.07, 2));
+    const rightEyeSlot = Math.sqrt(Math.pow((x - rightEyeX) / 0.26, 2) + Math.pow((y - eyeY) / 0.07, 2));
 
-    if (leftEyeDist < 0.95 || rightEyeDist < 0.95) {
-      continue; // Skip eye hole regions
+    // Exclude actual narrow vision slits
+    if (leftEyeSlot < 0.6 || rightEyeSlot < 0.6) {
+      continue;
     }
 
-    // Nose Bridge protrusion: vertical ridge
-    if (y > -0.4 && y < 0.45 && Math.abs(x) < 0.35) {
-      const noseShape = Math.cos((x / 0.35) * Math.PI / 2); // 1 at center, 0 at outer
-      const noseProfile = Math.cos(((y - 0.05) / 0.45) * Math.PI / 2); // profile along nose
-      z += noseShape * noseProfile * 0.45;
+    // Orbits/Eyelids modeling around eyes
+    const leftOrbit = Math.sqrt(Math.pow((x - leftEyeX) / 0.38, 2) + Math.pow((y - eyeY) / 0.16, 2));
+    const rightOrbit = Math.sqrt(Math.pow((x - rightEyeX) / 0.38, 2) + Math.pow((y - eyeY) / 0.16, 2));
+    if (leftOrbit < 1.0) {
+      // Depress socket then raise eyelid rims
+      const factor = Math.cos(leftOrbit * Math.PI);
+      z -= 0.18 * (1.0 + factor);
+      if (leftOrbit > 0.6) {
+        z += 0.05 * Math.sin((leftOrbit - 0.6) * Math.PI * 2.5); // eyelid fold
+      }
     }
-
-    // Cheeks: nice rounded elevation
-    if (Math.abs(x) > 0.4 && Math.abs(x) < 1.0 && y > -0.3 && y < 0.4) {
-      const cheekFactor = Math.cos(((Math.abs(x) - 0.7) / 0.3) * Math.PI / 2) * Math.cos((y / 0.4) * Math.PI / 2);
-      z += cheekFactor * 0.15;
-    }
-
-    // Mouth indentation
-    if (y > -0.75 && y < -0.45 && Math.abs(x) < 0.5) {
-      const mouthShape = Math.cos((x / 0.5) * Math.PI / 2) * Math.cos(((y + 0.6) / 0.15) * Math.PI / 2);
-      z -= mouthShape * 0.08;
-      // Lips slightly outstanding
-      if (Math.abs(y + 0.6) < 0.04) {
-        z += mouthShape * 0.04;
+    if (rightOrbit < 1.0) {
+      const factor = Math.cos(rightOrbit * Math.PI);
+      z -= 0.18 * (1.0 + factor);
+      if (rightOrbit > 0.6) {
+        z += 0.05 * Math.sin((rightOrbit - 0.6) * Math.PI * 2.5);
       }
     }
 
-    // Jaw/Chin protrusion
-    if (y < -0.8 && y > -1.2 && Math.abs(x) < 0.3) {
-      const chinShape = Math.cos((x / 0.3) * Math.PI / 2) * Math.cos(((y + 1.0) / 0.2) * Math.PI / 2);
-      z += chinShape * 0.15;
+    // 2. High-Fidelity Human Nose Shape
+    // Protrusions for nose bridge and nostrils, tip at (0, -0.15)
+    const noseBaseY = -0.18;
+    const noseTopY = 0.35;
+    if (y > noseBaseY && y < noseTopY) {
+      const noseLength = noseTopY - noseBaseY;
+      const progress = (y - noseBaseY) / noseLength; // 0 at base, 1 at bridge top
+      
+      const noseWidth = 0.14 + (1.0 - progress) * 0.12; // widens at nostrils base
+      if (Math.abs(x) < noseWidth) {
+        // cosine dome projection
+        const noseCrossSection = Math.cos((x / noseWidth) * Math.PI / 2);
+        
+        // height profile: nose tip stands out most at progress = 0.1, then tapers to bridge
+        let noseHeight = 0.42;
+        if (progress < 0.12) {
+          noseHeight = 0.18 + (progress / 0.12) * 0.24; // tip slope from bulb to tip
+        } else {
+          noseHeight = 0.42 - (progress - 0.12) * 0.22; // straight high bridge line
+        }
+        z += noseCrossSection * noseHeight;
+
+        // nostril curves flare
+        if (Math.abs(x) > 0.07 && progress < 0.18) {
+          z += Math.sin(((Math.abs(x) - 0.07) / (noseWidth - 0.07)) * Math.PI) * 0.06;
+        }
+      }
     }
 
-    // Cyberpunk grid cuts/scratches or micro-fracturing (ice-crystal)
-    // We add small offsets is all
-    const jitter = 0.03;
+    // 3. Realistic Cupid's Bow & Lips Structure
+    // Centered at y = -0.58
+    const mouthY = -0.58;
+    const mouthYDist = y - mouthY;
+    const mouthWidth = 0.45;
+    if (Math.abs(x) < mouthWidth && Math.abs(mouthYDist) < 0.16) {
+      const mouthXRatio = x / mouthWidth;
+      const mouthWidthFactor = Math.cos(mouthXRatio * Math.PI / 2);
+      
+      // Upper lip & Lower lip profiles
+      if (Math.abs(mouthYDist) < 0.08) {
+        const lipPartFactor = Math.cos((mouthYDist / 0.08) * Math.PI / 2);
+        
+        // Cupid's bow dip around center top
+        let cupidsBow = 1.0;
+        if (mouthYDist > 0 && Math.abs(x) < 0.1) {
+          cupidsBow = 0.85 + 0.15 * Math.abs(x / 0.1);
+        }
+        
+        // Add lip thickness
+        z += 0.15 * mouthWidthFactor * lipPartFactor * cupidsBow;
+
+        // Realistic split gap between lip lines
+        if (Math.abs(mouthYDist) < 0.016) {
+          z -= 0.08 * mouthWidthFactor;
+        }
+      }
+
+      // Philtrum indentation (vertical trough between nose and mouth)
+      if (y > -0.48 && y < -0.18 && Math.abs(x) < 0.1) {
+        const philtrumFactor = Math.cos((x / 0.1) * Math.PI / 2);
+        z -= 0.04 * philtrumFactor;
+      }
+    }
+
+    // 4. Rounded Prominent Cheeks & Face Contour
+    // High zygomatic arches at y = -0.05, x = ±0.72
+    const leftCheekDist = Math.sqrt(Math.pow((x - (-0.72)) / 0.42, 2) + Math.pow((y - (-0.05)) / 0.38, 2));
+    const rightCheekDist = Math.sqrt(Math.pow((x - 0.72) / 0.42, 2) + Math.pow((y - (-0.05)) / 0.38, 2));
+    if (leftCheekDist < 1.0) {
+      z += Math.cos(leftCheekDist * Math.PI / 2) * 0.12;
+    }
+    if (rightCheekDist < 1.0) {
+      z += Math.cos(rightCheekDist * Math.PI / 2) * 0.12;
+    }
+
+    // 5. Eyebrows Contour ridge
+    const leftBrowDist = Math.sqrt(Math.pow((x - (-0.46)) / 0.35, 2) + Math.pow((y - 0.48) / 0.12, 2));
+    const rightBrowDist = Math.sqrt(Math.pow((x - 0.46) / 0.35, 2) + Math.pow((y - 0.48) / 0.12, 2));
+    if (leftBrowDist < 1.0) {
+      z += Math.cos(leftBrowDist * Math.PI / 2) * 0.07;
+    }
+    if (rightBrowDist < 1.0) {
+      z += Math.cos(rightBrowDist * Math.PI / 2) * 0.07;
+    }
+
+    // 6. Styled Chin & Jaw Contour
+    const chinY = -1.1;
+    const chinYDist = y - chinY;
+    const chinWidth = 0.28;
+    if (Math.abs(x) < chinWidth && Math.abs(chinYDist) < 0.18) {
+      const chinPartFactor = Math.cos((x / chinWidth) * Math.PI / 2) * Math.cos((chinYDist / 0.18) * Math.PI / 2);
+      z += chinPartFactor * 0.12;
+    }
+
+    // Cyberpunk grid jitter to keep the particle aesthetics floating
+    const jitter = 0.012;
     x += rand(-jitter, jitter);
     y += rand(-jitter, jitter);
     z += rand(-jitter, jitter);
 
-    // Filter points to keep the shape perfectly proportional
     return { x, y, z };
   }
   return { x: rand(-1, 1), y: rand(-1, 1), z: rand(-0.2, 0.2) };
@@ -100,14 +187,14 @@ function getSingleMaskPoint(): { x: number; y: number; z: number } {
  */
 function getSingleLogoPoint(index: number, total: number): { x: number; y: number; z: number } {
   // Let's divide particles structurally:
-  // 55% -> Stylized 'A' frame
-  // 35% -> Orbiting tilted ring
+  // 50% -> Stylized 'A' frame
+  // 30% -> Orbiting tilted ring
   // 5% -> Orbiting sphere (the glowing satellite)
-  // 5% -> Bottom text elements (A I T O) to anchor the logo
+  // 15% -> Bottom text elements (A I T O) to anchor the logo with superb high definition
   const choice = index / total;
 
-  if (choice < 0.55) {
-    // Stylized 'A' Frame
+  if (choice < 0.50) {
+    // Stylized 'A' Frame (50% particles)
     // Standard 'A' consists of two main diagonals, a crossbar, and the top arch
     const subChoice = Math.random();
     if (subChoice < 0.4) {
@@ -135,9 +222,8 @@ function getSingleLogoPoint(index: number, total: number): { x: number; y: numbe
       const z = rand(-0.1, 0.1);
       return { x, y, z };
     }
-  } else if (choice < 0.90) {
-    // Orbiting Ring: A tilted ellipse wrapping around the 'A'
-    // Equation of a tilted circle:
+  } else if (choice < 0.80) {
+    // Orbiting Ring: A tilted ellipse wrapping around the 'A' (30% particles)
     const angle = rand(0, Math.PI * 2);
     // Base radius
     const r = 1.9 + rand(-0.06, 0.06);
@@ -148,16 +234,14 @@ function getSingleLogoPoint(index: number, total: number): { x: number; y: numbe
     const yBase = -0.1 + Math.sin(angle) * 0.5; // tilted down/up
 
     // Let's tilt the whole thing around the X-axis for cosmetic swoop
-    // y' = y cos(a) - z sin(a)
-    // z' = y sin(a) + z cos(a)
     const tilt = 0.38; // approx 22 degrees
     const x = xBase;
     const y = yBase * Math.cos(tilt) - zBase * Math.sin(tilt);
     const z = yBase * Math.sin(tilt) + zBase * Math.cos(tilt);
 
     return { x, y, z };
-  } else if (choice < 0.95) {
-    // Orbiting Sphere: top right of orbit
+  } else if (choice < 0.85) {
+    // Orbiting Sphere: top right of orbit (5% particles)
     const theta = rand(0, Math.PI * 2);
     const phi = rand(0, Math.PI);
     const radius = 0.18 + rand(0, 0.02);
@@ -172,35 +256,80 @@ function getSingleLogoPoint(index: number, total: number): { x: number; y: numbe
 
     return { x, y, z };
   } else {
-    // Bottom logo text (A I T O) - distributed as dotted base points
-    // Let's create positions for 4 letters: A at -1, I at -0.3, T at 0.3, O at 1
-    // y will be -1.7
+    // Bottom logo text (A I T O) (15% particles for massive density, clarity and sharpness) - distributed as precise geometric point outlines
     const letters = [
       // 'A' points
       () => {
+        const sub = Math.random();
         const t = Math.random();
-        if (t < 0.4) return { x: rand(-1.0, -0.85), y: rand(-1.8, -1.6) };
-        if (t < 0.8) return { x: rand(-0.85, -0.7), y: rand(-1.6, -1.8) };
-        return { x: rand(-0.95, -0.75), y: rand(-1.72, -1.68) };
+        const centerX = -0.75;
+        if (sub < 0.45) {
+          // Left slanted leg of A
+          const lx = centerX - 0.15 + 0.15 * t;
+          const ly = -1.85 + 0.35 * t;
+          return { x: lx, y: ly };
+        } else if (sub < 0.9) {
+          // Right slanted leg of A
+          const rx = centerX + 0.15 - 0.15 * t;
+          const ry = -1.85 + 0.35 * t;
+          return { x: rx, y: ry };
+        } else {
+          // Cross bar of A
+          const cx = centerX - 0.08 + 0.16 * t;
+          const cy = -1.68 + rand(-0.005, 0.005);
+          return { x: cx, y: cy };
+        }
       },
       // 'I' points
       () => {
+        const sub = Math.random();
         const t = Math.random();
-        if (t < 0.7) return { x: rand(-0.32, -0.28), y: rand(-1.8, -1.6) };
-        return { x: rand(-0.35, -0.25), y: rand(-1.6, -1.6) }; // Top bar
+        const centerX = -0.25;
+        if (sub < 0.6) {
+          // Vertical stem of I
+          const ix = centerX + rand(-0.015, 0.015);
+          const iy = -1.85 + 0.35 * t;
+          return { x: ix, y: iy };
+        } else if (sub < 0.8) {
+          // Top serif horizontal bar of I
+          const ix = centerX - 0.1 + 0.2 * t;
+          const iy = -1.5 + rand(-0.005, 0.005);
+          return { x: ix, y: iy };
+        } else {
+          // Bottom serif horizontal bar of I
+          const ix = centerX - 0.1 + 0.2 * t;
+          const iy = -1.85 + rand(-0.005, 0.005);
+          return { x: ix, y: iy };
+        }
       },
       // 'T' points
       () => {
+        const sub = Math.random();
         const t = Math.random();
-        if (t < 0.5) return { x: rand(0.28, 0.32), y: rand(-1.8, -1.6) };
-        return { x: rand(0.2, 0.4), y: rand(-1.62, -1.58) }; // Bar
+        const centerX = 0.25;
+        if (sub < 0.6) {
+          // Vertical central stem of T
+          const tx = centerX + rand(-0.015, 0.015);
+          const ty = -1.85 + 0.35 * t;
+          return { x: tx, y: ty };
+        } else {
+          // Top horizontal cross bar of T
+          const tx = centerX - 0.15 + 0.3 * t;
+          const ty = -1.5 + rand(-0.005, 0.005);
+          return { x: tx, y: ty };
+        }
       },
       // 'O' points
       () => {
         const angle = rand(0, Math.PI * 2);
-        const rx = 0.12;
-        const ry = 0.1;
-        return { x: 0.9 + Math.cos(angle) * rx, y: -1.7 + Math.sin(angle) * ry };
+        const centerX = 0.75;
+        // Draw a thick rounded oval outline for O
+        const rx = 0.14 + rand(-0.015, 0.015);
+        const ry = 0.17 + rand(-0.015, 0.015);
+        return { 
+          x: centerX + Math.cos(angle) * rx, 
+          y: -1.675 + Math.sin(angle) * ry 
+        };
       }
     ];
 
@@ -209,7 +338,7 @@ function getSingleLogoPoint(index: number, total: number): { x: number; y: numbe
     return {
       x: coords.x,
       y: coords.y,
-      z: rand(-0.05, 0.05)
+      z: rand(-0.04, 0.04)
     };
   }
 }
