@@ -14,7 +14,7 @@ export default function AitoDialogue() {
     {
       id: "init",
       sender: "mask",
-      content: "AITO 神经元全息意识模组已连线。我是你的 3D 人脸粒子全息助手，你可以向我提问任何问题。已自动建立服务端代理接口，随时准备对接高级模型！",
+      content: "AITO已准备就绪，你可以向我提问任何问题",
       timestamp: new Date(),
     },
   ]);

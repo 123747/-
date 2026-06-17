@@ -124,12 +124,12 @@ function getSingleMaskPoint(): { x: number; y: number; z: number } {
           cupidsBow = 0.85 + 0.15 * Math.abs(x / 0.1);
         }
         
-        // Add lip thickness
-        z += 0.15 * mouthWidthFactor * lipPartFactor * cupidsBow;
+        // Add lip thickness (increased for higher prominence)
+        z += 0.23 * mouthWidthFactor * lipPartFactor * cupidsBow;
 
-        // Realistic split gap between lip lines
+        // Realistic split gap between lip lines (deepened for a more defined expression line)
         if (Math.abs(mouthYDist) < 0.016) {
-          z -= 0.08 * mouthWidthFactor;
+          z -= 0.14 * mouthWidthFactor;
         }
       }
 
