@@ -24,7 +24,10 @@ function getSingleMaskPoint(): { x: number; y: number; z: number } {
 
     // Standard human face proportions:
     // Chin tapering down, forehead scaling up
-    const taper = y < 0 ? (1.0 + y * 0.42) : (1.0 - (y - 0.6) * 0.08);
+    // Smoothed transition at the bottom to ensure elegant chin contour without sharp corners
+    const taper = y < 0 
+      ? (1.0 + y * 0.28 + (y * y) * 0.04) 
+      : (1.0 - (y - 0.6) * 0.08);
     x *= taper;
 
     // Generates a smooth base spherical/dome depth Z
@@ -41,63 +44,63 @@ function getSingleMaskPoint(): { x: number; y: number; z: number } {
       continue;
     }
 
-    // 1. Sleek Cybernetic Eye-Slits (narrow slots rather than huge hollow sockets to look human but futuristic)
-    // Eyes are placed at y = 0.28, x = ±0.44
+    // 1. Realistic Prominent Hollow Eye Sockets (exactly like the reference image)
+    // Eyes are placed at y = 0.25, x = ±0.44
     const leftEyeX = -0.44;
     const rightEyeX = 0.44;
-    const eyeY = 0.28;
-    const leftEyeSlot = Math.sqrt(Math.pow((x - leftEyeX) / 0.26, 2) + Math.pow((y - eyeY) / 0.07, 2));
-    const rightEyeSlot = Math.sqrt(Math.pow((x - rightEyeX) / 0.26, 2) + Math.pow((y - eyeY) / 0.07, 2));
+    const eyeY = 0.25;
+    // We define a larger, more realistic rounded socket shape so that the eyes form complete hollow gaps
+    const leftEyeSlot = Math.sqrt(Math.pow((x - leftEyeX) / 0.32, 2) + Math.pow((y - eyeY) / 0.18, 2));
+    const rightEyeSlot = Math.sqrt(Math.pow((x - rightEyeX) / 0.32, 2) + Math.pow((y - eyeY) / 0.18, 2));
 
-    // Exclude actual narrow vision slits
-    if (leftEyeSlot < 0.6 || rightEyeSlot < 0.6) {
+    // Exclude points inside the eye sockets to create highly defined, dark human eye-cutouts
+    if (leftEyeSlot < 0.92 || rightEyeSlot < 0.92) {
       continue;
     }
 
     // Orbits/Eyelids modeling around eyes
-    const leftOrbit = Math.sqrt(Math.pow((x - leftEyeX) / 0.38, 2) + Math.pow((y - eyeY) / 0.16, 2));
-    const rightOrbit = Math.sqrt(Math.pow((x - rightEyeX) / 0.38, 2) + Math.pow((y - eyeY) / 0.16, 2));
+    const leftOrbit = Math.sqrt(Math.pow((x - leftEyeX) / 0.42, 2) + Math.pow((y - eyeY) / 0.24, 2));
+    const rightOrbit = Math.sqrt(Math.pow((x - rightEyeX) / 0.42, 2) + Math.pow((y - eyeY) / 0.24, 2));
     if (leftOrbit < 1.0) {
-      // Depress socket then raise eyelid rims
       const factor = Math.cos(leftOrbit * Math.PI);
       z -= 0.18 * (1.0 + factor);
       if (leftOrbit > 0.6) {
-        z += 0.05 * Math.sin((leftOrbit - 0.6) * Math.PI * 2.5); // eyelid fold
+        z += 0.06 * Math.sin((leftOrbit - 0.6) * Math.PI * 2.5); // prominent eyebrow / eyelid fold
       }
     }
     if (rightOrbit < 1.0) {
       const factor = Math.cos(rightOrbit * Math.PI);
       z -= 0.18 * (1.0 + factor);
       if (rightOrbit > 0.6) {
-        z += 0.05 * Math.sin((rightOrbit - 0.6) * Math.PI * 2.5);
+        z += 0.06 * Math.sin((rightOrbit - 0.6) * Math.PI * 2.5);
       }
     }
 
-    // 2. High-Fidelity Human Nose Shape
-    // Protrusions for nose bridge and nostrils, tip at (0, -0.15)
-    const noseBaseY = -0.18;
-    const noseTopY = 0.35;
+    // 2. Tall, Sharp and Highly Defined Human Nose Shape (from the brow down to a clear tip)
+    const noseBaseY = -0.22;
+    const noseTopY = 0.45;
     if (y > noseBaseY && y < noseTopY) {
       const noseLength = noseTopY - noseBaseY;
       const progress = (y - noseBaseY) / noseLength; // 0 at base, 1 at bridge top
       
-      const noseWidth = 0.14 + (1.0 - progress) * 0.12; // widens at nostrils base
+      const noseWidth = 0.13 + (1.0 - progress) * 0.13; // expands naturally at the tip
       if (Math.abs(x) < noseWidth) {
-        // cosine dome projection
+        // Cosine cross section (sharp ridge)
         const noseCrossSection = Math.cos((x / noseWidth) * Math.PI / 2);
         
-        // height profile: nose tip stands out most at progress = 0.1, then tapers to bridge
-        let noseHeight = 0.42;
-        if (progress < 0.12) {
-          noseHeight = 0.18 + (progress / 0.12) * 0.24; // tip slope from bulb to tip
+        let noseHeight = 0.52; // Very tall & sharp 3D profile
+        if (progress < 0.15) {
+          // Sharp slope up to the nose tip
+          noseHeight = 0.25 + (progress / 0.15) * 0.32;
         } else {
-          noseHeight = 0.42 - (progress - 0.12) * 0.22; // straight high bridge line
+          // Sleek straight nose bridge descending to the brow intersection
+          noseHeight = 0.57 - (progress - 0.15) * 0.26;
         }
         z += noseCrossSection * noseHeight;
 
-        // nostril curves flare
-        if (Math.abs(x) > 0.07 && progress < 0.18) {
-          z += Math.sin(((Math.abs(x) - 0.07) / (noseWidth - 0.07)) * Math.PI) * 0.06;
+        // Flare and curves of nostrils base
+        if (Math.abs(x) > 0.05 && progress < 0.22) {
+          z += Math.sin(((Math.abs(x) - 0.05) / (noseWidth - 0.05)) * Math.PI) * 0.08;
         }
       }
     }

@@ -12,13 +12,15 @@ import {
   Activity,
   Heart,
   CornerDownRight,
-  Fingerprint
+  Fingerprint,
+  Server
 } from "lucide-react";
 import { AppConfig, GestureType } from "./types";
 import MaskCanvas from "./components/MaskCanvas";
 import DebugPanel from "./components/DebugPanel";
 import CameraManager from "./components/CameraManager";
 import AitoDialogue from "./components/AitoDialogue";
+import BackendSystem from "./components/BackendSystem";
 
 export default function App() {
   // Global active parameters config state
@@ -45,6 +47,7 @@ export default function App() {
   const [detectedHands, setDetectedHands] = useState<number>(0);
   const [fps, setFps] = useState<number>(60);
   const [showQuickHelp, setShowQuickHelp] = useState<boolean>(true);
+  const [isBackendOpen, setIsBackendOpen] = useState<boolean>(false);
 
   // Keyboard shortcut listener
   useEffect(() => {
@@ -167,7 +170,9 @@ export default function App() {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 15 }}
-            className="absolute bottom-6 left-1/2 -translate-x-1/2 transform z-10 px-5 py-4 bg-black/60 backdrop-blur-xl border border-cyan-500/30 rounded shadow-[0_20px_50px_rgba(0,0,0,0.95)] text-[10px] text-[#e0e8f0]/80 tracking-wide max-w-sm w-[90%] md:w-96"
+            className="absolute bottom-20 left-1/2 -translate-x-1/2 transform z-50 px-5 py-4 bg-black/80 backdrop-blur-xl border border-cyan-500/40 rounded shadow-[0_20px_50px_rgba(0,0,0,0.95)] text-[10px] text-[#e0e8f0]/80 tracking-wide max-w-sm w-[90%] md:w-96 select-text pointer-events-auto"
+            onClick={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-white/10">
               <div className="flex items-center gap-1.5">
@@ -175,8 +180,15 @@ export default function App() {
                 <span className="text-white font-bold uppercase tracking-wider text-[10px]">交互指南 (OPERATIONS)</span>
               </div>
               <button
-                onClick={() => setShowQuickHelp(false)}
-                className="text-[9px] text-[#00f2ff] hover:text-white selection:bg-transparent tracking-widest font-bold cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowQuickHelp(false);
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                  setShowQuickHelp(false);
+                }}
+                className="text-[9px] text-[#00f2ff] hover:text-white selection:bg-transparent tracking-widest font-bold cursor-pointer px-1.5 py-0.5 bg-black/40 hover:bg-[#00f2ff]/20 rounded border border-cyan-400/20 active:scale-95 transition-all pointer-events-auto z-50"
               >
                 [HIDE]
               </button>
@@ -214,15 +226,51 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {!showQuickHelp && (
+      {/* Persistent Bottom Controllers Group */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-2 select-none pointer-events-none">
+        {!showQuickHelp && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowQuickHelp(true);
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              setShowQuickHelp(true);
+            }}
+            className="p-1 px-3 bg-black/60 backdrop-blur border border-cyan-400/20 rounded text-[9px] font-mono text-cyan-400 hover:text-white flex items-center gap-1.5 shadow-[0_0_10px_rgba(0,242,255,0.1)] cursor-pointer active:scale-95 transition-all uppercase tracking-widest pointer-events-auto z-40"
+          >
+            <HelpCircle className="w-3 h-3 text-cyan-400" />
+            <span>帮助指南 HELP TIPS_ON</span>
+          </button>
+        )}
+
         <button
-          onClick={() => setShowQuickHelp(true)}
-          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 p-1.5 px-3 bg-black/60 backdrop-blur border border-cyan-400/20 rounded text-[9px] font-mono text-cyan-400 hover:text-white flex items-center gap-1.5 shadow-[0_0_10px_rgba(0,242,255,0.1)] cursor-pointer active:scale-95 transition-all uppercase tracking-widest"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsBackendOpen(true);
+          }}
+          onTouchStart={(e) => {
+            e.stopPropagation();
+            setIsBackendOpen(true);
+          }}
+          className="p-1.5 px-3.5 bg-cyan-950/40 hover:bg-cyan-900/60 backdrop-blur border border-cyan-400/50 hover:border-cyan-400 rounded text-[9px] font-mono text-white flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,242,255,0.25)] cursor-pointer active:scale-95 transition-all uppercase font-bold tracking-wider animate-pulse hover:animate-none pointer-events-auto z-40"
         >
-          <HelpCircle className="w-3 h-3 text-cyan-400" />
-          <span>HELP TIPS_ON</span>
+          <Server className="w-3.5 h-3.5 text-[#00f2ff]" />
+          <span>[ 进入后台页面 ] ENTER BACKEND SYSTEM</span>
         </button>
-      )}
+      </div>
+
+      {/* Backend Administration system Modal Container */}
+      <AnimatePresence>
+        {isBackendOpen && (
+          <BackendSystem 
+            isOpen={isBackendOpen} 
+            onClose={() => setIsBackendOpen(false)} 
+            highlightColor={config.highlightColor} 
+          />
+        )}
+      </AnimatePresence>
 
       {/* Cyber decorative grid frame borders */}
       <div className="absolute top-0 left-0 w-8 h-8 border-t border-l border-cyan-400/40 pointer-events-none z-10 m-2" />
