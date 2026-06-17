@@ -34,8 +34,8 @@ export default function MaskCanvas({ config, gestureState }: MaskCanvasProps) {
 
     // Create Scene + Fog
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color("#020508"); // Sophisticated Dark deep background
-    scene.fog = new THREE.FogExp2("#020508", 0.08);
+    scene.background = new THREE.Color("#ffffff"); // Rebranded crisp bright white
+    scene.fog = new THREE.FogExp2("#ffffff", 0.08);
 
     // Create Camera
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
@@ -120,9 +120,9 @@ export default function MaskCanvas({ config, gestureState }: MaskCanvasProps) {
         // High-contrast radial glow circle
         const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
         gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
-        gradient.addColorStop(0.2, "rgba(230, 250, 255, 0.85)");
-        gradient.addColorStop(0.5, "rgba(6, 182, 212, 0.35)");
-        gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+        gradient.addColorStop(0.3, "rgba(255, 255, 255, 0.8)");
+        gradient.addColorStop(0.6, "rgba(255, 255, 255, 0.3)");
+        gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
         
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, 64, 64);
@@ -146,7 +146,7 @@ export default function MaskCanvas({ config, gestureState }: MaskCanvasProps) {
       map: particleTexture,
       transparent: true,
       opacity: configRef.current.transparency,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
       depthWrite: false,
     });
 
@@ -183,8 +183,8 @@ export default function MaskCanvas({ config, gestureState }: MaskCanvasProps) {
       const curveMaterial = new THREE.LineBasicMaterial({
         color: logoGlowColor,
         transparent: true,
-        opacity: 0.12 + Math.random() * 0.15,
-        blending: THREE.AdditiveBlending,
+        opacity: 0.15 + Math.random() * 0.15,
+        blending: THREE.NormalBlending,
       });
 
       const line = new THREE.Line(curveGeometry, curveMaterial);
@@ -193,9 +193,9 @@ export default function MaskCanvas({ config, gestureState }: MaskCanvasProps) {
     }
 
     // Modern cyber grid background elements
-    const gridHelper = new THREE.GridHelper(30, 30, "#00f2ff", "#082630");
+    const gridHelper = new THREE.GridHelper(30, 30, "#0ea5e9", "#e2e8f0");
     gridHelper.position.set(0, -2.8, -2.0);
-    gridHelper.material.opacity = 0.15;
+    gridHelper.material.opacity = 0.25;
     gridHelper.material.transparent = true;
     scene.add(gridHelper);
 
@@ -204,7 +204,7 @@ export default function MaskCanvas({ config, gestureState }: MaskCanvasProps) {
     dirLight.position.set(2, 5, 5);
     scene.add(dirLight);
 
-    const ambientLight = new THREE.AmbientLight("#031720", 0.7);
+    const ambientLight = new THREE.AmbientLight("#e2e8f0", 0.9);
     scene.add(ambientLight);
 
     // --- ANIMATION / RENDERING LOOP ---
